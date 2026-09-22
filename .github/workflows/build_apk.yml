@@ -11,40 +11,32 @@ steps:
   - name: Setup Android SDK
     uses: android-actions/setup-android@v3
 
-  - name: Validate Project Layout & Prepare Gradle
+  - name: Prepare Project Structure & Gradle Wrapper
     run: |
-      echo "Scanning repository directory structure..."
-      # If files were pushed inside a subdirectory, move them to root
+      # If the files were extracted into a nested subfolder, move them to the repo root
       if [ ! -f "build.gradle.kts" ] && [ -d "RamTRX_Cockpit_Android" ]; then
-        echo "Moving files from nested subfolder to repository root..."
         cp -r RamTRX_Cockpit_Android/* .
       fi
 
-      # Ensure gradlew exists; if missing, generate a wrapper using preinstalled gradle
+      # Ensure the Gradle wrapper exists and is executable
       if [ ! -f "./gradlew" ]; then
-        echo "gradlew not found. Generating Gradle wrapper automatically..."
         gradle wrapper --gradle-version 8.2.2
       fi
       chmod +x ./gradlew
 
-  - name: Build Debug APK with Gradle
+  - name: Build Debug APK
     run: |
-      ./gradlew assembleDebug --stacktrace --no-daemon
+      ./gradlew assembleDebug --no-daemon --stacktrace
 
-  - name: Inspect Build Output
+  - name: Locate and Collect APK
     run: |
       mkdir -p output_apks
-      find app/build/outputs/apk/ -name "*.apk" -exec cp {} output_apks/ \;
-      echo "Built APKs found:"
+      find . -name "*.apk" -exec cp {} output_apks/ \;
       ls -la output_apks/
 
   - name: Upload APK Artifact
     uses: actions/upload-artifact@v4
     with:
-      name: RamTRX_Uconnect_Cockpit_Debug_APK
-      path: output_apks/*.apk
-      retention-days: 14
-
-      name: RamTRX_Uconnect_Cockpit_Debug_APK
+      name: RamTRX_Cockpit_Debug_APK
       path: output_apks/*.apk
       retention-days: 14
