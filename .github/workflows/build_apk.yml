@@ -1,0 +1,53 @@
+steps:
+  # STREAMING_CHUNK:Checking out repository code
+  - name: Checkout Repository
+    uses: actions/checkout@v4
+
+  # STREAMING_CHUNK:Setting up Java Development Kit (JDK 17)
+  - name: Set up JDK 17
+    uses: actions/setup-java@v4
+    with:
+      distribution: 'temurin'
+      java-version: '17'
+
+  # STREAMING_CHUNK:Configuring Android SDK and Build Tools
+  - name: Setup Android SDK
+    uses: android-actions/setup-android@v3
+
+  # STREAMING_CHUNK:Verifying project structure and Gradle wrapper
+  - name: Validate Project Layout & Prepare Gradle
+    run: |
+      echo "Scanning repository directory structure..."
+      # If files were pushed inside a subdirectory (e.g. RamTRX_Cockpit_Android), detect it
+      if [ ! -f "build.gradle.kts" ] && [ -d "RamTRX_Cockpit_Android" ]; then
+        echo "Moving files from nested subfolder to repository root..."
+        cp -r RamTRX_Cockpit_Android/* .
+      fi
+
+      # Ensure gradlew exists; if missing, generate a wrapper using preinstalled gradle
+      if [ ! -f "./gradlew" ]; then
+        echo "gradlew not found. Generating Gradle wrapper automatically..."
+        gradle wrapper --gradle-version 8.2.2
+      fi
+      chmod +x ./gradlew
+
+  # STREAMING_CHUNK:Compiling and assembling the debug APK
+  - name: Build Debug APK with Gradle
+    run: |
+      ./gradlew assembleDebug --stacktrace --no-daemon
+
+  # STREAMING_CHUNK:Locating output APK files
+  - name: Inspect Build Output
+    run: |
+      mkdir -p output_apks
+      find app/build/outputs/apk/ -name "*.apk" -exec cp {} output_apks/ \;
+      echo "Built APKs found:"
+      ls -la output_apks/
+
+  # STREAMING_CHUNK:Uploading APK artifact for direct download
+  - name: Upload APK Artifact
+    uses: actions/upload-artifact@v4
+    with:
+      name: RamTRX_Uconnect_Cockpit_Debug_APK
+      path: output_apks/*.apk
+      retention-days: 14
